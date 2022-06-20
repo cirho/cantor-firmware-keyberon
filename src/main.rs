@@ -67,6 +67,7 @@ mod app {
         serial_tx: serial::Tx<hal::pac::USART1>,
         serial_rx: serial::Rx<hal::pac::USART1>,
         serial_buf: [u8; 4],
+        transform: fn(Event) -> Event,
     }
 
     #[init]
@@ -96,6 +97,17 @@ mod app {
         // let mut timer = hal::timer::Timer::new(cx.device.TIM2, &mut clocks).counter_hz();
         timer.start(1.kHz()).unwrap();
         timer.listen(hal::timer::Event::Update);
+
+        let pa9 = gpioa.pa9.into_pull_up_input();
+
+        // wait for some time for the pin to be in the correct mode
+        cortex_m::asm::delay(clocks.sysclk().to_Hz() / 100);
+
+        let transform: fn(Event) -> Event = if pa9.is_low() {
+            |e| e
+        } else {
+            |e| e.transform(|i, j| (i, 11 - j))
+        };
 
         // initialize USB
         let usb = USB {
@@ -186,6 +198,7 @@ mod app {
                 serial_tx,
                 serial_rx,
                 serial_buf: [0; 4],
+                transform,
             },
             init::Monotonics(),
         )
@@ -211,7 +224,7 @@ mod app {
 
     /// Check all switches for their state, register corresponding events, and
     /// spawn generation of a USB keyboard report (including layout event processing)
-    #[task(binds=TIM2, priority=1, local=[debouncer, matrix, timer, serial_tx])]
+    #[task(binds=TIM2, priority=1, local=[debouncer, matrix, timer, serial_tx, transform])]
     fn tick(cx: tick::Context) {
         // defmt::info!("Processing keyboard events");
 
@@ -224,7 +237,7 @@ mod app {
             .local
             .debouncer
             .events(cx.local.matrix.get().unwrap())
-            .map(transform_keypress_coordinates)
+            .map(cx.local.transform)
         {
             for &b in &serialize(event) {
                 block!(cx.local.serial_tx.write(b)).unwrap();
@@ -300,18 +313,6 @@ mod app {
             Event::Press(i, j) => [b'P', i, j, b'\n'],
             Event::Release(i, j) => [b'R', i, j, b'\n'],
         }
-    }
-
-    /// Transform key events from other keyboard half by mirroring coordinates
-    #[cfg(feature = "right_half")]
-    fn transform_keypress_coordinates(e: Event) -> Event {
-        // mirror coordinates for events for right half
-        e.transform(|i, j| (i, 11 - j))
-    }
-
-    #[cfg(not(feature = "right_half"))]
-    fn transform_keypress_coordinates(e: Event) -> Event {
-        e
     }
 
     // USB events
