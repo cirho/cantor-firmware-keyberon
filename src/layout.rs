@@ -1,7 +1,7 @@
 use keyberon::action::Action;
 
 const PL_LAYER: Action = Action::DefaultLayer(0);
-const US_LAYER: Action = Action::DefaultLayer(4);
+const US_LAYER: Action = Action::DefaultLayer(3);
 
 #[rustfmt::skip]
 pub static LAYERS: keyberon::layout::Layers<12, 4, 4> = keyberon::layout::layout! {
