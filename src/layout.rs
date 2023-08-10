@@ -1,7 +1,5 @@
-use keyberon::action::{k, m, Action::*, HoldTapAction, HoldTapConfig};
+use keyberon::action::{k, m, Action, Action::*, HoldTapAction, HoldTapConfig};
 use keyberon::key_code::KeyCode::*;
-
-type Action = keyberon::action::Action<()>;
 
 static DLAYER: Action = Action::DefaultLayer(0);
 static QWERTZLAYER: Action = Action::DefaultLayer(4);
@@ -52,7 +50,7 @@ macro_rules! a {
 }
 
 #[rustfmt::skip]
-pub static LAYERS: keyberon::layout::Layers<12, 4, 5, ()> = keyberon::layout::layout! {
+pub static LAYERS: keyberon::layout::Layers<12, 4, 5> = keyberon::layout::layout! {
     {
         [ J     Y     Z     U     A     Q     P     B     M     L     F       -  ],
         [(1)    C     S     I     E     O     D     T     N     R     H      (1) ],
@@ -69,7 +67,7 @@ pub static LAYERS: keyberon::layout::Layers<12, 4, 5, ()> = keyberon::layout::la
         [ t  Escape Tab    n    Enter  n      Kb0    Kb1 Kb2 Kb3 Comma    {s!(Kb7)}],
         [ t  t      t      t    t      t      t      t   t   t   t        t],
     }{
-        [{Custom(())}  n    n     n     VolUp    n   F12  F7  F8  F9  n  {Custom(())}],
+        [n             n    n     n     VolUp    n   F12  F7  F8  F9  n  n],
         [t             n    n     n     {PPN}    n   F11  F4  F5  F6  n  t],
         [n             n    n     n     VolDown  n   F10  F1  F2  F3  n  n],
         [t             t    t     t     t        t   t    t   {QWERTZLAYER} t   t   t],

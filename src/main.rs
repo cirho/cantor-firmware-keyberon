@@ -8,7 +8,7 @@ use hal::prelude::*;
 use hal::serial;
 use keyberon::debounce::Debouncer;
 use keyberon::key_code::KbHidReport;
-use keyberon::layout::{CustomEvent, Event, Layout};
+use keyberon::layout::{Event, Layout};
 use keyberon::matrix::DirectPinMatrix;
 use nb::block;
 use stm32f4xx_hal as hal;
@@ -55,7 +55,7 @@ mod app {
         usb_dev: UsbDevice,
         usb_class: UsbClass,
         #[lock_free]
-        layout: Layout<12, 4, 5, ()>,
+        layout: Layout<12, 4, 5>,
     }
 
     // local resources (between tasks)
@@ -234,11 +234,7 @@ mod app {
             }
         }
 
-        let tick = cx.shared.layout.tick();
-        match tick {
-            CustomEvent::Release(()) => unsafe { cortex_m::asm::bootload(0x1FFF0000 as _) },
-            _ => (),
-        }
+        let _tick = cx.shared.layout.tick();
 
         // if this is the USB-side, send a USB keyboard report
         if is_host {
