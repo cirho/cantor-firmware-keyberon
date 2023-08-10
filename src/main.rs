@@ -114,8 +114,8 @@ mod app {
         let usb_bus = unsafe { USB_BUS.as_ref().unwrap() };
         let usb_class = keyberon::new_class(&usb_bus, ());
         let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(VID, PID))
-            .manufacturer("Dario Götz")
-            .product("Dario Götz's 42-key split keyboard")
+            .manufacturer("cirho")
+            .product("Cantor Split Keyboard")
             .serial_number(env!("CARGO_PKG_VERSION"))
             .build();
 
