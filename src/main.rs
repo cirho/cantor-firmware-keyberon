@@ -1,7 +1,6 @@
 #![no_main]
 #![no_std]
 
-use core::sync::atomic::{AtomicUsize, Ordering};
 use defmt_rtt as _; // global logger
 use hal::gpio::{EPin, Input};
 use hal::otg_fs::{UsbBusType, USB};
@@ -36,14 +35,6 @@ const PID: u16 = 0x27db;
 fn panic() -> ! {
     cortex_m::asm::udf()
 }
-
-static COUNT: AtomicUsize = AtomicUsize::new(0);
-defmt::timestamp!("{=usize}", {
-    // NOTE(no-CAS) `timestamps` runs with interrupts disabled
-    let n = COUNT.load(Ordering::Relaxed);
-    COUNT.store(n + 1, Ordering::Relaxed);
-    n
-});
 
 /// Terminates the application and makes `probe-run` exit with exit-code = 0
 pub fn exit() -> ! {
@@ -80,7 +71,6 @@ mod app {
 
     #[init]
     fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        defmt::info!("init");
         // prepare static datastructures for USB
         static mut EP_MEMORY: [u32; 1024] = [0; 1024];
         static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
@@ -143,8 +133,7 @@ mod app {
                 &clocks,
             )
             .unwrap();
-        // or equivalently
-        // let mut serial = serial::Serial::new(cx.device.USART1, pins, 38_400.bps(), &mut clocks);
+
         serial.listen(serial::Event::Rxne);
         let (serial_tx, serial_rx) = serial.split();
 
@@ -217,10 +206,6 @@ mod app {
     /// Register a key press/release event with the layout (it will not be processed, yet)
     #[task(priority=1, capacity=8, shared=[layout])]
     fn register_keyboard_event(cx: register_keyboard_event::Context, event: Event) {
-        // match event {
-        //     Event::Press(i, j) => defmt::info!("Registering press {} {}", i, j),
-        //     Event::Release(i, j) => defmt::info!("Registering release {} {}", i, j),
-        // }
         cx.shared.layout.event(event)
     }
 
@@ -228,12 +213,9 @@ mod app {
     /// spawn generation of a USB keyboard report (including layout event processing)
     #[task(binds=TIM2, priority=1, local=[debouncer, matrix, timer, serial_tx], shared=[usb_dev, usb_class, layout])]
     fn tick(mut cx: tick::Context) {
-        // defmt::info!("Processing keyboard events");
         let is_host = cx.shared.usb_dev.lock(|d| d.state()) == UsbDeviceState::Configured;
 
         cx.local.timer.wait().ok();
-        // or equivalently
-        // cx.local.timer.clear_interrupt(hal::timer::Event::Update);
 
         // scan keyboard
         for event in cx
@@ -250,10 +232,6 @@ mod app {
                     block!(cx.local.serial_tx.write(b)).unwrap();
                 }
             }
-            // match event {
-            //     Event::Press(i, j) => defmt::info!("Pressed {} {}", i, j),
-            //     Event::Release(i, j) => defmt::info!("Released {} {}", i, j),
-            // }
         }
 
         let tick = cx.shared.layout.tick();
@@ -287,7 +265,6 @@ mod app {
 
             if cx.local.serial_buf[3] == b'\n' {
                 if let Ok(event) = deserialize(&cx.local.serial_buf[..]) {
-                    defmt::info!("Received message via USART");
                     register_keyboard_event::spawn(event).unwrap()
                 }
             }
